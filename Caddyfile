@@ -1,0 +1,6 @@
+# Automatic HTTPS for {$DOMAIN} (Let's Encrypt for a public name; a local CA for "localhost").
+# Caddy appends the real client address to X-Forwarded-For, which the app uses for rate limiting.
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy app:3000
+}

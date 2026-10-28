@@ -1,0 +1,64 @@
+# docker compose up -d --build                    app on http://127.0.0.1:${HTTP_PORT} (put your own HTTPS proxy in front)
+# docker compose --profile https up -d --build    also runs Caddy, which gets a TLS certificate for ${DOMAIN}
+name: ctf-venue-checkin-v1
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ctf}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-ctf}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ctf} -d ${POSTGRES_DB:-ctf}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # no ports: only the app can reach the database
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-ctf}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-ctf}
+      # the app is only reachable through a reverse proxy, so the proxy's X-Forwarded-For is trustworthy
+      TRUST_PROXY: "true"
+    ports:
+      # loopback only: browsers reach the app through the HTTPS proxy, never directly
+      - "127.0.0.1:${HTTP_PORT:-3000}:3000"
+    volumes:
+      - ./data:/data:ro          # put the registration CSV here to import it with the CLI
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache:uid=1000,gid=1000
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+
+  caddy:
+    profiles: [https]
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [app]
+    environment:
+      DOMAIN: ${DOMAIN:-}   # required when this profile is used
+    ports:
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTP_REDIRECT_PORT:-80}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

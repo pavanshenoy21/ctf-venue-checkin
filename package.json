@@ -1,0 +1,53 @@
+{
+  "name": "ctf-venue-checkin-v1",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "cp -r .next/static .next/standalone/.next/ && node .next/standalone/server.js",
+    "typecheck": "tsc --noEmit",
+    "migrate": "tsx src/scripts/migrate.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "cli": "tsx src/scripts/cli.ts",
+    "test:e2e": "next build && playwright test",
+    "build:cli": "esbuild src/scripts/cli.ts --bundle --platform=node --target=node22 --format=cjs --external:pg-native --outfile=dist/cli.cjs --log-level=warning"
+  },
+  "dependencies": {
+    "@fontsource/alegreya-sans": "5.1.0",
+    "@fontsource/marcellus": "5.1.0",
+    "csv-parse": "7.0.3",
+    "jszip": "3.10.2",
+    "next": "16.4.1",
+    "nodemailer": "10.1.1",
+    "pg": "8.23.1",
+    "qr-scanner": "1.4.2",
+    "qrcode": "1.5.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/mailparser": "3.9.0",
+    "@types/node": "22.20.5",
+    "@types/pg": "8.23.1",
+    "@types/pngjs": "6.0.5",
+    "@types/qrcode": "1.5.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/smtp-server": "3.5.13",
+    "esbuild": "0.28.2",
+    "jsqr": "1.4.0",
+    "mailparser": "3.9.39",
+    "pngjs": "7.0.0",
+    "smtp-server": "3.19.22",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "4.1.12"
+  }
+}

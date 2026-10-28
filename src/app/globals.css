@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/* Wine-dark sea + bronze, parchment text (same tokens as the Python version). */
+@theme {
+  --color-sea-950: #08111d;
+  --color-sea-900: #0e1b2c;
+  --color-sea-800: #15263a;
+  --color-sea-700: #22364d;
+  --color-sea-600: #36506b;
+  --color-parchment: #ece6d8;
+  --color-mist: #97a6b8;
+  --color-bronze-300: #e6c48d;
+  --color-bronze-400: #d9ac66;
+  --color-bronze-500: #c8964a;
+  --color-bronze-600: #a97a35;
+  --color-ok: #86b86f;
+  --color-warn: #e2ae45;
+  --color-bad: #e5574e;
+  --font-display: "Marcellus", Georgia, serif;
+  --font-sans: "Alegreya Sans", system-ui, sans-serif;
+}
+
+@layer base {
+  html { font-size: 17px; }
+  body { @apply bg-sea-900 text-parchment font-sans antialiased; }
+  :focus-visible { outline: 2px solid var(--color-bronze-400); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+}
+
+@utility num { font-variant-numeric: tabular-nums; }
+@utility meander {
+  height: 10px; opacity: .5;
+  background: repeating-linear-gradient(90deg, #c8964a 0 6px, transparent 6px 10px, #c8964a 10px 12px, transparent 12px 20px);
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40;
+}
+@utility btn-primary { @apply btn bg-bronze-500 text-sea-950 hover:bg-bronze-400; }
+@utility btn-quiet { @apply btn border border-sea-600 text-parchment hover:bg-sea-700; }
+@utility btn-danger { @apply btn bg-bad text-white hover:brightness-110; }
+@utility field {
+  @apply w-full rounded-md border border-sea-600 bg-sea-950 px-3 py-2 text-parchment placeholder:text-mist/70 outline-hidden focus:border-bronze-400;
+}
+@utility panel { @apply rounded-lg border border-sea-700 bg-sea-800; }
+
+@layer components {
+  .table { @apply w-full text-left; }
+  .table th { @apply whitespace-nowrap border-b border-sea-700 px-3 py-2 text-sm font-medium text-mist; }
+  .table td { @apply border-b border-sea-700/60 px-3 py-2 align-top; }
+  .table tbody tr:last-child td { @apply border-b-0; }
+}

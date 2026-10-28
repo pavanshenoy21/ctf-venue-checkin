@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.env
+*.tsbuildinfo
+next-env.d.ts
+test-results/
+playwright-report/
+dist/
+data/*
+!data/.gitkeep
+backups/
