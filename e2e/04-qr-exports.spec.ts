@@ -40,7 +40,7 @@ test('download every QR code as a ZIP', async ({ page }) => {
   await signIn(page, 'root')
   await page.goto('/admin/qr-codes')
   const dl = page.waitForEvent('download')
-  await page.getByRole('link', { name: 'Generate all QR codes (ZIP)' }).click()
+  await page.getByRole('link', { name: 'All QR codes (ZIP)' }).click()
   const d = await dl
   expect(d.suggestedFilename()).toBe('qr_codes.zip')
   const zip = await JSZip.loadAsync(readFileSync(await d.path()))
@@ -55,8 +55,8 @@ test('export check-ins and the full participant list as CSV', async ({ page }) =
   await signIn(page, 'root')
   await page.goto('/admin/checkins')
   for (const [link, file, rows, header] of [
-    ['Export check-ins', 'checkins.csv', 4, 'Name,Email,Team,Venue,Check-in time'],
-    ['Export full participant list', 'allocation.csv', 172, 'Name,Email,Team,Venue,QR URL,Check-in status,Check-in time'],
+    ['Check-ins CSV', 'checkins.csv', 4, 'Name,Email,Team,Venue,Check-in time'],
+    ['Full participant list', 'allocation.csv', 172, 'Name,Email,Team,Venue,QR URL,Check-in status,Check-in time'],
   ] as const) {
     const dl = page.waitForEvent('download')
     await page.getByRole('link', { name: link }).click()

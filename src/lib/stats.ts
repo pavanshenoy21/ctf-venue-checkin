@@ -11,12 +11,14 @@ export async function recentCheckins(limit: number, venue: Venue | null = null, 
 }
 
 export async function venueStats(venue: Venue, recent = 15, db: Db = pool()) {
-  const r = (await db.query<{ assigned: number; checked: number }>(`SELECT
+  const r = (await db.query<{ assigned: number; checked: number; out: number }>(`SELECT
       (SELECT count(*)::int FROM participants WHERE assigned_venue = $1) AS assigned,
-      (SELECT count(*)::int FROM check_ins WHERE venue = $1) AS checked`, [venue])).rows[0]!
+      (SELECT count(*)::int FROM check_ins WHERE venue = $1) AS checked,
+      (SELECT count(*)::int FROM exits e JOIN participants p ON p.id = e.participant_id
+        WHERE p.assigned_venue = $1 AND e.returned_at IS NULL AND e.cancelled_at IS NULL) AS out`, [venue])).rows[0]!
   return {
     venue, label: VENUE_LABEL[venue], capacity: config.capacity[venue], assigned: r.assigned, checked_in: r.checked,
-    remaining: r.assigned - r.checked, percent: r.assigned ? Math.round((1000 * r.checked) / r.assigned) / 10 : 0,
+    remaining: r.assigned - r.checked, out_now: r.out, percent: r.assigned ? Math.round((1000 * r.checked) / r.assigned) / 10 : 0,
     recent: recent ? (await recentCheckins(recent, venue, db)).map(({ venue: _v, ...x }) => x) : [],
   }
 }

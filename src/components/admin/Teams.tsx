@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from 'react'
 import { api, errorText, type Venue } from '../api'
-import { AttendancePill, Empty, GROUPS, GroupSwatch, Notice, PageHeader, Presence, Segmented, usePoll, VenueTag, type GroupKey } from '../ui'
+import { AttendancePill, Empty, GROUPS, GroupSwatch, Loading, Notice, PageHeader, Presence, Segmented, selectClass, usePoll, VenueTag, type GroupKey } from '../kit'
+import { Card } from '../ui/card'
+import { Input } from '../ui/input'
 import type { SoloRow, TeamRow } from './types'
 
 type Att = 'any' | 'full' | 'partial' | 'absent'
@@ -21,7 +23,7 @@ export default function Teams() {
     return c
   }, [d])
 
-  if (!d) return err ? <Notice title="Could not load teams">{errorText(err)}</Notice> : <p className="text-mist">Loading teams…</p>
+  if (!d) return err ? <Notice title="Could not load teams">{errorText(err)}</Notice> : <Loading>Loading teams…</Loading>
 
   const needle = q.trim().toLowerCase()
   const teams = d.teams.filter((t) =>
@@ -36,7 +38,7 @@ export default function Teams() {
 
   return (
     <>
-      <PageHeader title="Teams">
+      <PageHeader eyebrow="Roster" title="Teams">
         {counts.all} teams and {counts.none} participants without a team, largest teams first. Green dots mark members who have checked in.
       </PageHeader>
 
@@ -49,19 +51,19 @@ export default function Teams() {
           <Segmented label="Attendance" value={att} onChange={setAtt} options={[
             { value: 'any', label: 'Any attendance' }, { value: 'full', label: 'All present' },
             { value: 'partial', label: 'Partly here' }, { value: 'absent', label: 'Not arrived' }]} />
-          <select className="field w-auto" aria-label="Venue" value={venue} onChange={(e) => setVenue(e.target.value as '' | Venue)}>
+          <select className={selectClass} aria-label="Venue" value={venue} onChange={(e) => setVenue(e.target.value as '' | Venue)}>
             <option value="">Both venues</option><option value="ISE">ISE Seminar Hall</option><option value="DTH">DTH</option>
           </select>
-          <input className="field min-w-[14rem] flex-1" type="search" aria-label="Search team or member" placeholder="Search team or member" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input className="min-w-[14rem] flex-1" type="search" aria-label="Search team or member" placeholder="Search team or member" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
       </div>
 
-      {sections.length === 0 && solo.length === 0 && <div className="panel"><Empty>No teams match these filters.</Empty></div>}
+      {sections.length === 0 && solo.length === 0 && <Card className="py-0"><Empty>No teams match these filters.</Empty></Card>}
 
       {sections.map(([k, list]) => (
-        <section key={k} className="panel mb-6 overflow-hidden" aria-label={GROUPS[k].label}>
-          <h2 className="flex items-baseline gap-3 px-5 pt-4 font-display text-lg">
-            <GroupSwatch group={k} /><span className="num font-sans text-base text-mist">{list.length}</span>
+        <Card key={k} className="mb-6 gap-0 overflow-hidden py-0" aria-label={GROUPS[k].label}>
+          <h2 className="flex items-baseline gap-3 px-5 pt-4 font-display text-lg font-bold">
+            <GroupSwatch group={k} /><span className="num font-mono text-sm text-muted-foreground">{list.length}</span>
           </h2>
           <div className="overflow-x-auto px-2 pb-1 pt-2">
             <table className="table min-w-[640px]">
@@ -75,7 +77,7 @@ export default function Teams() {
                       <ul className="flex flex-wrap gap-x-5 gap-y-1">
                         {t.members.map((m, i) => (
                           <li key={i} className="flex items-center gap-2"><Presence present={m.checked_in} />
-                            <span className={m.checked_in ? '' : 'text-mist'}>{m.name}</span></li>
+                            <span className={m.checked_in ? '' : 'text-muted-foreground'}>{m.name}</span></li>
                         ))}
                       </ul>
                     </td>
@@ -85,28 +87,28 @@ export default function Teams() {
               </tbody>
             </table>
           </div>
-        </section>
+        </Card>
       ))}
 
       {solo.length > 0 && (
-        <section className="panel mb-6 overflow-hidden" aria-label="No team">
-          <h2 className="flex items-baseline gap-3 px-5 pt-4 font-display text-lg">
-            <GroupSwatch group="none" /><span className="num font-sans text-base text-mist">{solo.length}</span>
+        <Card className="gap-0 py-0 mb-6 overflow-hidden" aria-label="No team">
+          <h2 className="flex items-baseline gap-3 px-5 pt-4 font-display text-lg font-bold">
+            <GroupSwatch group="none" /><span className="num font-mono text-sm text-muted-foreground">{solo.length}</span>
           </h2>
-          <p className="px-5 text-sm text-mist">Participants without a team are always seated in DTH.</p>
+          <p className="px-5 text-sm text-muted-foreground">Participants without a team are always seated in DTH.</p>
           <div className="overflow-x-auto px-2 pb-1 pt-2">
             <table className="table min-w-[480px]">
               <thead><tr><th>Participant</th><th>Venue</th><th className="text-right">Attendance</th></tr></thead>
               <tbody>{solo.map((p) => (
                 <tr key={p.id}>
-                  <td><span className="flex items-center gap-2"><Presence present={p.checked_in} /><span className={p.checked_in ? 'font-medium' : 'text-mist'}>{p.name}</span></span></td>
+                  <td><span className="flex items-center gap-2"><Presence present={p.checked_in} /><span className={p.checked_in ? 'font-medium' : 'text-muted-foreground'}>{p.name}</span></span></td>
                   <td><VenueTag venue={p.venue} /></td>
                   <td className="text-right"><AttendancePill present={p.checked_in ? 1 : 0} size={1} /></td>
                 </tr>))}
               </tbody>
             </table>
           </div>
-        </section>
+        </Card>
       )}
     </>
   )

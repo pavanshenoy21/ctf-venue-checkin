@@ -22,31 +22,35 @@ async function lookup(token: string): Promise<Outcome> {
 export default async function CheckinPage({ params }: { params: Promise<{ token: string }> }) {
   const d = await lookup((await params).token)
   return (
-    <div className="flex min-h-screen flex-col">
-      <div className="meander" />
-      <main className="mx-auto flex max-w-xl flex-1 flex-col items-center justify-center px-6 py-10 text-center">
-        <p className="font-display text-sm tracking-[0.3em] text-bronze-400 sm:text-base">VOYAGE TO ITHACA</p>
-        {'error' in d && d.error === 'invalid' && (<>
-          <h1 className="mt-10 text-3xl font-bold">INVALID QR CODE</h1>
-          <p className="mt-3 text-parchment/80">This QR code is not recognized.<br />Please contact the organizers.</p>
-        </>)}
-        {'error' in d && d.error === 'busy' && <p className="mt-10 text-parchment/80">Too many requests. Please try again in a minute.</p>}
-        {'ready' in d && !d.ready && (<>
-          <h1 className="mt-10 text-3xl font-bold">VENUE NOT ASSIGNED YET</h1>
-          <p className="mt-3 text-parchment/80">Hello {d.name}. Venues have not been announced yet. Please check back soon.</p>
-        </>)}
-        {'ready' in d && d.ready && (<>
-          <p className="mt-10 text-sm tracking-widest text-mist">YOUR VENUE</p>
-          <h1 className="mt-2 font-display text-5xl font-bold leading-tight text-bronze-400 sm:text-7xl">{d.venue_label}</h1>
-          <div className="mt-8 text-lg">
-            {d.team ? (<><p className="text-sm text-mist">Team</p><p className="text-2xl font-semibold">{d.team}</p></>) : <p className="text-xl">You are participating without a team.</p>}
-            <p className="mt-2 text-mist">{d.name}</p>
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 py-12 text-center">
+      {/* eslint-disable-next-line @next/next/no-img-element -- small static logo */}
+      <img src="/email-logo.png" alt="Coding Club · 10 Years" className="h-16 w-auto" />
+      <p className="eyebrow mt-6 whitespace-nowrap text-primary">Voyage to Ithaca</p>
+      {'error' in d && d.error === 'invalid' && (<>
+        <h1 className="mt-10 font-display text-3xl font-extrabold">INVALID QR CODE</h1>
+        <p className="mt-3 text-foreground/80">This QR code is not recognized.<br />Please contact the organizers.</p>
+      </>)}
+      {'error' in d && d.error === 'busy' && <p className="mt-10 text-foreground/80">Too many requests. Please try again in a minute.</p>}
+      {'ready' in d && !d.ready && (<>
+        <h1 className="mt-10 font-display text-3xl font-extrabold">VENUE NOT ASSIGNED YET</h1>
+        <p className="mt-3 text-foreground/80">Hello {d.name}. Venues have not been announced yet. Please check back soon.</p>
+      </>)}
+      {'ready' in d && d.ready && (
+        <div className="mt-10 w-full rounded-2xl border bg-card px-6 py-8 shadow-[0_24px_48px_-24px_rgb(0_0_0/0.9)]">
+          {d.pass && <p className={`eyebrow mb-4 ${d.pass === 'open' ? 'text-gold-light' : 'text-[#f3a49b]'}`}>
+            {d.pass === 'open' ? 'Re-entry pass · works once' : d.pass === 'used' ? 'Re-entry pass · already used' : 'Re-entry pass · cancelled'}</p>}
+          <p className="eyebrow text-muted-foreground">Your venue</p>
+          <h1 className="mt-3 font-display text-5xl font-extrabold leading-[1.05] tracking-[-0.02em] text-gold-light sm:text-6xl">{d.venue_label}</h1>
+          <div className="mt-8 border-t pt-6">
+            {d.team ? (<><p className="eyebrow text-muted-foreground">Team</p><p className="mt-1 font-display text-2xl font-bold">{d.team}</p></>) : <p className="text-xl">You are participating without a team.</p>}
+            <p className="mt-2 text-muted-foreground">{d.name}</p>
           </div>
-          <p className="mt-8">Please report to {d.team ? 'the ' : ''}<b>{d.venue_label}</b>{d.team ? ' venue' : ''} for check-in.</p>
-          <p className="mt-2 text-sm text-mist">Your QR code will be verified at the entrance.</p>
-        </>)}
-      </main>
-      <div className="meander" />
-    </div>
+          {d.pass === 'open'
+            ? <p className="mt-6">Show this re-entry QR at the <b className="text-gold-light">{d.venue_label}</b> desk to come back in.</p>
+            : <p className="mt-6">Please report to {d.team ? 'the ' : ''}<b className="text-gold-light">{d.venue_label}</b>{d.team ? ' venue' : ''} for check-in.</p>}
+          <p className="mt-2 text-sm text-muted-foreground">Your QR code will be verified at the entrance.</p>
+        </div>
+      )}
+    </main>
   )
 }

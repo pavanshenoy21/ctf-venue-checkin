@@ -1,9 +1,14 @@
 'use client'
 
+import { ChevronLeft, ChevronRight, Download, Send, TestTube2 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { api, errorText } from '../api'
-import { Bar, Notice, PageHeader, usePoll } from '../ui'
+import { Bar, Loading, Notice, PageHeader, Section, usePoll } from '../kit'
+import { Badge } from '../ui/badge'
+import { Button } from '../ui/button'
+import { Card } from '../ui/card'
+import { Input } from '../ui/input'
 import type { Emails as EmailsData } from './types'
 
 const PAGE = 10
@@ -20,55 +25,60 @@ export default function Emails() {
     void reload()
   }
   if (!d) {
-    if (err?.status === 409) return (<><PageHeader title="Emails" /><Notice tone="warn" title="Confirm venues first">Emails include each person&apos;s venue, so they are prepared after the allocation is final. <Link className="underline" href="/admin/import">Go to Setup</Link></Notice></>)
-    return err ? <Notice title="Could not load emails">{errorText(err)}</Notice> : <p className="text-mist">Loading emails…</p>
+    if (err?.status === 409) return (<><PageHeader eyebrow="Mail" title="Emails" /><Notice tone="warn" title="Confirm venues first">Emails include each person&apos;s venue, so they are prepared after the allocation is final. <Link className="underline" href="/admin/import">Go to Setup</Link></Notice></>)
+    return err ? <Notice title="Could not load emails">{errorText(err)}</Notice> : <Loading>Loading emails…</Loading>
   }
   const unsent = d.total - d.sent
   return (
     <>
-      <PageHeader title="Emails" actions={<a className="btn-quiet" href="/api/admin/emails/export.csv">Export for mail merge (CSV)</a>}>
-        Each participant gets their own venue, team and QR code. Nobody&apos;s email mentions anyone else.
+      <PageHeader eyebrow="Mail" title="Emails" actions={<Button asChild variant="muted"><a href="/api/admin/emails/export.csv"><Download />Mail-merge CSV</a></Button>}>
+        Team members get their venue, team and QR code. People without a team get the rules instead, and their QR from the <Link className="text-gold-light hover:underline" href="/admin/walk-ins">Walk-ins</Link> page once they report at DTH. Nobody&apos;s email mentions anyone else.
       </PageHeader>
 
-      <section className="panel mb-6 p-5" aria-label="Delivery">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-display text-xl">Delivery</h2>
-          <p className="num text-mist">{d.sent} of {d.total} sent{d.failed > 0 && <span className="text-bad">, {d.failed} failed</span>}</p>
+      <Section className="mb-8" eyebrow="Delivery" title={<span className="num">{d.sent} <span className="text-muted-foreground">of {d.total} sent</span></span>}
+        aria-label="Delivery" aside={d.failed > 0 ? <Badge variant="bad">{d.failed} failed</Badge> : d.sent === d.total && d.total > 0 ? <Badge variant="ok">All sent</Badge> : undefined}>
+        <div className="px-5 pb-6 pt-4 sm:px-6">
+          <Bar value={d.sent} max={d.total} color="#5fd08a" height="h-2.5" label="Emails sent" />
+          {d.smtp_configured ? (
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Input className="min-w-[16rem] flex-1" type="email" aria-label="Test email address" placeholder="Participant email to send a test to" value={test} onChange={(e) => setTest(e.target.value)} />
+              <Button variant="muted" disabled={!test.trim()} onClick={() => send({ only_email: test.trim(), resend: true })}><TestTube2 />Send test</Button>
+              <Button variant="solid" disabled={unsent === 0} onClick={() => send({}, `Send emails to ${unsent} participants who haven't received one?`)}>
+                <Send />{unsent === 0 ? 'Everyone sent' : `Send to ${unsent} unsent`}
+              </Button>
+            </div>
+          ) : (
+            <p className="mt-5 text-sm text-muted-foreground">Direct sending is off because no mail server is set. Add the SMTP settings to <code className="font-mono text-gold-light">.env</code> and restart the app, or use the mail-merge export.</p>
+          )}
+          {d.smtp_configured && <p className="mt-4 text-sm text-muted-foreground">{d.smtp_backups > 0
+            ? `${d.smtp_backups} backup mail ${d.smtp_backups === 1 ? 'account' : 'accounts'} set: if the main account hits its sending limit or goes down, sending carries on from the backup.`
+            : 'No backup mail account set. Add SMTP2_* settings to .env so sending carries on if the main account hits its daily limit.'}</p>}
+          {d.failed > 0 && <p className="mt-4 text-sm text-muted-foreground">Failed emails are retried the next time you send to unsent participants.</p>}
+          {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
         </div>
-        <div className="mt-3"><Bar value={d.sent} max={d.total} color="#86B86F" label="Emails sent" /></div>
-        {d.smtp_configured ? (
-          <div className="mt-5 flex flex-wrap gap-3">
-            <input className="field min-w-[16rem] flex-1" type="email" aria-label="Test email address" placeholder="Participant email to send a test to" value={test} onChange={(e) => setTest(e.target.value)} />
-            <button className="btn-quiet" disabled={!test.trim()} onClick={() => send({ only_email: test.trim(), resend: true })}>Send test</button>
-            <button className="btn-primary" disabled={unsent === 0} onClick={() => send({}, `Send emails to ${unsent} participants who haven't received one?`)}>
-              {unsent === 0 ? 'Everyone has been sent' : `Send to ${unsent} unsent`}
-            </button>
-          </div>
-        ) : (
-          <p className="mt-4 text-sm text-mist">Direct sending is off because no mail server is set. Add the SMTP settings to <code>.env</code> and restart the app, or use the mail-merge export.</p>
-        )}
-        {d.failed > 0 && <p className="mt-3 text-sm text-mist">Failed emails are retried the next time you send to unsent participants.</p>}
-        {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
-      </section>
+      </Section>
 
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-xl">Preview</h2>
-        <div className="num flex items-center gap-2 text-sm text-mist">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="eyebrow mb-1 text-muted-foreground">Preview</p>
+          <h2 className="font-display text-xl font-bold">Each person&apos;s email</h2>
+        </div>
+        <div className="num flex items-center gap-2 font-mono text-xs text-muted-foreground">
           {d.total ? off + 1 : 0}–{Math.min(off + PAGE, d.total)} of {d.total}
-          <button className="btn-quiet px-3 py-1" disabled={off === 0} onClick={() => setOff(Math.max(0, off - PAGE))}>Previous</button>
-          <button className="btn-quiet px-3 py-1" disabled={off + PAGE >= d.total} onClick={() => setOff(off + PAGE)}>Next</button>
+          <Button variant="outline" size="icon-sm" aria-label="Previous" disabled={off === 0} onClick={() => setOff(Math.max(0, off - PAGE))}><ChevronLeft /></Button>
+          <Button variant="outline" size="icon-sm" aria-label="Next" disabled={off + PAGE >= d.total} onClick={() => setOff(off + PAGE)}><ChevronRight /></Button>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-2">
         {d.items.map((m) => (
-          <article key={m.id} className="panel overflow-hidden">
-            <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-sea-700 px-4 py-2 text-sm">
-              <span className="truncate text-mist">To {m.to}</span>
-              {m.sent_at ? <span className="text-ok">Sent</span> : m.error ? <span className="text-bad" title={m.error}>Failed</span> : <span className="text-mist">Not sent</span>}
+          <Card key={m.id} className="gap-0 overflow-hidden py-0">
+            <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5 text-sm">
+              <span className="truncate font-mono text-xs text-muted-foreground">To {m.to}</span>
+              {m.sent_at ? <Badge variant="ok">Sent</Badge> : m.error ? <Badge variant="bad" title={m.error}>Failed</Badge> : <Badge variant="muted">Not sent</Badge>}
             </header>
             {/* Server-rendered HTML: every participant-supplied value in it is HTML-escaped (see src/lib/email.ts). */}
-            <div className="bg-white p-4 text-black" dangerouslySetInnerHTML={{ __html: m.html }} />
-          </article>
+            <div className="bg-black" dangerouslySetInnerHTML={{ __html: m.html }} />
+          </Card>
         ))}
       </div>
     </>

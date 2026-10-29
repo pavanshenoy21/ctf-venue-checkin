@@ -130,3 +130,33 @@ describe.skipIf(!existsSync(REAL))('parseCsv: the real event CSV (local only)', 
     expect(p.warnings.some((w) => /RVCE26BCS125/i.test(w))).toBe(true)
   })
 })
+
+describe('parseCsv: Venue column', () => {
+  const V = 'Venue,Team,Full Name,Email\n'
+  afterEach(() => { delete process.env.DTH_CAPACITY })
+  it('reads each person\'s venue and counts them', () => {
+    const p = parseCsv(enc(V + 'ISE Seminar Hall,Owls,Ann,a@x.io\nISE Seminar Hall,Owls,Bob,b@x.io\nDTH,Cats,Cy,c@x.io\nDTH,(No team),Di,d@x.io\n'))
+    expect(p.errors).toEqual([])
+    expect(p.venues).toEqual({ DTH: 2, ISE: 2 })
+    expect(p.rows.map((r) => r.venue)).toEqual(['ISE', 'ISE', 'DTH', 'DTH'])
+  })
+  it('is optional', () => {
+    const p = parseCsv(enc('Team,Full Name,Email\nOwls,Ann,a@x.io\n'))
+    expect([p.venues, p.rows[0]!.venue]).toEqual([null, null])
+  })
+  it('rejects blank or unknown venues, split teams, and people without a team in ISE', () => {
+    const p = parseCsv(enc(V + ',Owls,Ann,a@x.io\nMoon,Cats,Bob,b@x.io\nDTH,Dogs,Cy,c@x.io\nISE,Dogs,Di,d@x.io\nISE,(No team),Ed,e@x.io\n'))
+    expect(p.errors).toEqual([
+      'Line 2: missing venue. Fill in the Venue column for everyone, or remove the column.',
+      "Line 3: unknown venue 'Moon' (use DTH or ISE Seminar Hall).",
+      'Line 6: people without a team must be in DTH.',
+      "Team 'Dogs' is split across venues (DTH, ISE).",
+    ])
+  })
+  it('warns when a venue is over capacity', () => {
+    process.env.DTH_CAPACITY = '1'
+    const p = parseCsv(enc(V + 'DTH,Owls,Ann,a@x.io\nDTH,Owls,Bob,b@x.io\n'))
+    expect(p.warnings.join()).toMatch(/2 people in DTH, over its capacity of 1/)
+  })
+})
+

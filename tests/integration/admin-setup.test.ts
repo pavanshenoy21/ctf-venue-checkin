@@ -146,3 +146,33 @@ describe('confirm venues', () => {
     }
   })
 })
+
+describe('venues from the CSV', () => {
+  // Alphabetically Apollo would go to ISE first; the CSV says otherwise and wins.
+  const csv = 'Venue,Team,Full Name,Email\nDTH,Apollo,Ann,a@x.io\nDTH,Apollo,Bob,b@x.io\nDTH,Apollo,Cy,c@x.io\n' +
+    'ISE Seminar Hall,Zeus,Di,d@x.io\nISE Seminar Hall,Zeus,Ed,e@x.io\nISE Seminar Hall,Zeus,Fi,f@x.io\nDTH,(No team),Gus,g@x.io\n'
+  it('are used as-is when assigning venues, then confirm normally', async () => {
+    expect((await preview(csvForm(csv))).body.venues).toEqual({ DTH: 4, ISE: 3 })
+    await commit(csvForm(csv))
+    const r = await generate()
+    expect(r.status).toBe(200)
+    expect(r.body).toMatchObject({ status: 'DRAFT', from_csv: true, validation_errors: [] })
+    expect(r.body.venues.ISE.participants).toBe(3)
+    expect(await count("teams WHERE name = 'Zeus' AND assigned_venue = 'ISE'")).toBe(1)
+    expect(await count("participants WHERE assigned_venue = 'DTH'")).toBe(4)
+    expect((await confirm()).status).toBe(200)
+  })
+  it('are refused when they exceed a capacity', async () => {
+    process.env.DTH_CAPACITY = '3'
+    await commit(csvForm(csv))
+    const r = await generate()
+    expect(r.status).toBe(422)
+    expect(r.body.error).toMatch(/DTH: 4 people, capacity 3/)
+    expect(await status()).toBe('NONE')
+  })
+  it('a file without a Venue column still uses the allocation algorithm', async () => {
+    await commit(csvForm(demoCsv()))
+    expect((await generate()).body.from_csv).toBe(false)
+  })
+})
+

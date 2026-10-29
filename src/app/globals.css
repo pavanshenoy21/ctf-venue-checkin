@@ -1,51 +1,95 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-/* Wine-dark sea + bronze, parchment text (same tokens as the Python version). */
-@theme {
-  --color-sea-950: #08111d;
-  --color-sea-900: #0e1b2c;
-  --color-sea-800: #15263a;
-  --color-sea-700: #22364d;
-  --color-sea-600: #36506b;
-  --color-parchment: #ece6d8;
-  --color-mist: #97a6b8;
-  --color-bronze-300: #e6c48d;
-  --color-bronze-400: #d9ac66;
-  --color-bronze-500: #c8964a;
-  --color-bronze-600: #a97a35;
-  --color-ok: #86b86f;
-  --color-warn: #e2ae45;
-  --color-bad: #e5574e;
-  --font-display: "Marcellus", Georgia, serif;
-  --font-sans: "Alegreya Sans", system-ui, sans-serif;
+@custom-variant dark (&:is(.dark *));
+
+/* The CTFd Voyage to Ithaca theme: near-black, warm cream text, gold accents. Syne for titles, Space Grotesk
+   for everything you read, JetBrains Mono for labels and numbers. Dark only. */
+:root {
+  --radius: 0.75rem;
+  --background: #070707;
+  --foreground: #f2efe8;
+  --card: #101010;
+  --card-foreground: #f2efe8;
+  --popover: #141414;
+  --popover-foreground: #f2efe8;
+  --primary: #d9b56b;
+  --primary-foreground: #14100a;
+  --secondary: #181818;
+  --secondary-foreground: #f2efe8;
+  --muted: #161616;
+  --muted-foreground: #a1a1a1;
+  --accent: #1d1d1d;
+  --accent-foreground: #f2efe8;
+  --destructive: #e5574e;
+  --border: rgb(255 255 255 / 0.08);
+  --input: rgb(255 255 255 / 0.13);
+  --ring: #d9b56b;
+  --ok: #5fd08a;
+  --warn: #f0b44c;
+  --gold-light: #f1d79c;
+}
+
+@theme inline {
+  --font-sans: var(--font-grotesk), system-ui, sans-serif;
+  --font-display: var(--font-syne), var(--font-grotesk), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--destructive);
+  --color-gold: var(--primary);
+  --color-gold-light: var(--gold-light);
 }
 
 @layer base {
-  html { font-size: 17px; }
-  body { @apply bg-sea-900 text-parchment font-sans antialiased; }
-  :focus-visible { outline: 2px solid var(--color-bronze-400); outline-offset: 2px; }
+  * { @apply border-border outline-ring/50; }
+  html { font-size: 16px; color-scheme: dark; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  h1, h2, h3 { text-wrap: balance; }
+  ::selection { background: #ffd23f; color: #000; }
+  :focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 }
 
 @utility num { font-variant-numeric: tabular-nums; }
-@utility meander {
-  height: 10px; opacity: .5;
-  background: repeating-linear-gradient(90deg, #c8964a 0 6px, transparent 6px 10px, #c8964a 10px 12px, transparent 12px 20px);
-}
-@utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40;
-}
-@utility btn-primary { @apply btn bg-bronze-500 text-sea-950 hover:bg-bronze-400; }
-@utility btn-quiet { @apply btn border border-sea-600 text-parchment hover:bg-sea-700; }
-@utility btn-danger { @apply btn bg-bad text-white hover:brightness-110; }
-@utility field {
-  @apply w-full rounded-md border border-sea-600 bg-sea-950 px-3 py-2 text-parchment placeholder:text-mist/70 outline-hidden focus:border-bronze-400;
-}
-@utility panel { @apply rounded-lg border border-sea-700 bg-sea-800; }
+/* small uppercase mono label: section eyebrows, table headers, field names */
+@utility eyebrow { @apply font-mono text-[0.7rem] font-medium uppercase tracking-[0.2em]; }
 
 @layer components {
-  .table { @apply w-full text-left; }
-  .table th { @apply whitespace-nowrap border-b border-sea-700 px-3 py-2 text-sm font-medium text-mist; }
-  .table td { @apply border-b border-sea-700/60 px-3 py-2 align-top; }
+  .table { @apply w-full text-left text-sm; }
+  .table th { @apply font-mono text-[0.68rem] font-medium uppercase tracking-[0.18em] whitespace-nowrap border-b px-3 py-3 text-muted-foreground; }
+  .table td { @apply border-b border-border/60 px-3 py-3 align-middle; }
+  .table tbody tr { @apply transition-colors hover:bg-white/[0.02]; }
   .table tbody tr:last-child td { @apply border-b-0; }
 }
+
+/* the scanner's sweep line */
+@keyframes scan-sweep { 0%, 100% { transform: translateY(0); opacity: .2; } 50% { transform: translateY(calc(var(--reticle) - 4px)); opacity: 1; } }
+@utility animate-sweep { animation: scan-sweep 2.4s ease-in-out infinite; }
+@keyframes pop-in { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@utility animate-pop { animation: pop-in .35s cubic-bezier(.2,.9,.3,1.3) both; }

@@ -44,10 +44,12 @@ export async function listCheckins(venue: Venue | null) {
 export interface FullParticipant {
   id: number; name: string; email: string; team: string | null; venue: Venue | null; qr_token: string
   checked_in: boolean; checked_in_at: Date | null; email_sent_at: Date | null; email_error: string | null
+  qr_sent_at: Date | null; qr_error: string | null; walk_in: boolean
 }
 
 const FULL = `SELECT p.id, p.name, p.email, t.name AS team, p.assigned_venue AS venue, p.qr_token,
-    p.checked_in, p.checked_in_at, p.email_sent_at, p.email_error
+    p.checked_in, p.checked_in_at, p.email_sent_at, p.email_error, p.qr_sent_at, p.qr_error,
+    coalesce(t.walk_in, false) AS walk_in
   FROM participants p LEFT JOIN teams t ON t.id = p.team_id`
 
 export function allParticipants(): Promise<FullParticipant[]> {

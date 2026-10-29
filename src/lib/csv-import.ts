@@ -5,14 +5,14 @@
  * value in the no-team marker list (env NO_TEAM_MARKERS, comma separated) means "no team".
  */
 import { parse } from 'csv-parse/sync'
-import { config } from './config'
+import { config, VENUES, type Venue } from './config'
 
 export const MAX_BYTES = 2_000_000
 const EMAIL_RE = /^[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+$/
 // eslint-disable-next-line no-control-regex
 const CTRL_RE = /[\x00-\x1f\x7f]/
 
-type Field = 'team' | 'declared' | 'name' | 'email' | 'phone' | 'sap' | 'year' | 'branch'
+type Field = 'team' | 'declared' | 'name' | 'email' | 'phone' | 'sap' | 'year' | 'branch' | 'venue'
 export const ALIASES: Record<Field, string[]> = {
   team: ['team', 'team name', 'teamname', 'group', 'squad'],
   declared: ['team size', 'size', 'team_size'],
@@ -22,6 +22,8 @@ export const ALIASES: Record<Field, string[]> = {
   sap: ['sap id / admission no.', 'sap id', 'usn', 'roll no', 'id', 'student id', 'admission no'],
   year: ['year', 'class', 'semester'],
   branch: ['branch', 'department', 'dept', 'course'],
+  // optional: when present, these venues are used as-is instead of computing an allocation
+  venue: ['venue', 'hall', 'assigned venue'],
 }
 const COLS = new Map<string, Field>(Object.entries(ALIASES).flatMap(([f, al]) => al.map((a) => [a, f as Field])))
 
@@ -34,6 +36,7 @@ export interface Row {
   sap: string
   year: string
   branch: string
+  venue: Venue | null
 }
 
 export interface Summary {
@@ -54,6 +57,8 @@ export interface Parsed {
   summary: Summary
   teams: { name: string; size: number }[]
   oversized: { name: string; size: number }[]
+  // people per venue when the CSV has a Venue column, otherwise null
+  venues: Record<Venue, number> | null
 }
 
 export function noTeamMarkers(): Set<string> {
@@ -66,7 +71,7 @@ const fold = (s: string): string => s.toLowerCase()
 const emptySummary = (): Summary => ({ participants: 0, teams: 0, no_team: 0, teams_3: 0, teams_2: 0, teams_1: 0, teams_over_3: 0, empty_rows_skipped: 0 })
 
 export function parseCsv(data: Uint8Array): Parsed {
-  const out: Parsed = { rows: [], errors: [], warnings: [], summary: emptySummary(), teams: [], oversized: [] }
+  const out: Parsed = { rows: [], errors: [], warnings: [], summary: emptySummary(), teams: [], oversized: [], venues: null }
   if (data.byteLength > MAX_BYTES) { out.errors.push('File too large.'); return out }
   let text: string
   try {
@@ -112,9 +117,17 @@ export function parseCsv(data: Uint8Array): Parsed {
     if (CTRL_RE.test(name + team) || name.length > 200 || team.length > 120) out.errors.push(`Line ${ln}: invalid characters/length in name or team.`)
     const isNone = markers.has(fold(team))
     const key = isNone ? '' : fold(team)
+    let venue: Venue | null = null
+    if (idx.has('venue')) {
+      const v = fold(get(r, 'venue'))
+      venue = v === 'dth' ? 'DTH' : v.startsWith('ise') ? 'ISE' : null
+      if (!v) out.errors.push(`Line ${ln}: missing venue. Fill in the Venue column for everyone, or remove the column.`)
+      else if (!venue) out.errors.push(`Line ${ln}: unknown venue '${get(r, 'venue')}' (use DTH or ISE Seminar Hall).`)
+      else if (isNone && venue === 'ISE') out.errors.push(`Line ${ln}: people without a team must be in DTH.`)
+    }
     if (!declared.has(key)) declared.set(key, new Set())
     declared.get(key)!.add(get(r, 'declared'))
-    out.rows.push({ line: ln, name, email, team: isNone ? null : team, phone: get(r, 'phone'), sap: get(r, 'sap'), year: get(r, 'year'), branch: get(r, 'branch') })
+    out.rows.push({ line: ln, name, email, team: isNone ? null : team, phone: get(r, 'phone'), sap: get(r, 'sap'), year: get(r, 'year'), branch: get(r, 'branch'), venue })
   })
 
   // Group by case-folded name; the first spelling seen becomes the team's name.
@@ -135,6 +148,8 @@ export function parseCsv(data: Uint8Array): Parsed {
     const decl = [...(declared.get(k) ?? [])].filter(Boolean)
     if (decl.length && !(decl.length === 1 && decl[0] === String(members.length)))
       out.warnings.push(`Team '${canon}': declared size ${JSON.stringify(decl.sort())} but ${members.length} rows found.`)
+    const venues = new Set(members.map((m) => m.venue).filter(Boolean))
+    if (venues.size > 1) out.errors.push(`Team '${canon}' is split across venues (${[...venues].sort().join(', ')}).`)
     if (members.length > 3) {
       out.oversized.push({ name: canon, size: members.length })
       out.errors.push(`Team '${canon}' has ${members.length} participants (maximum is 3).`)
@@ -164,6 +179,12 @@ export function parseCsv(data: Uint8Array): Parsed {
     teams_3: sizes.filter((s) => s === 3).length, teams_2: sizes.filter((s) => s === 2).length,
     teams_1: sizes.filter((s) => s === 1).length, teams_over_3: sizes.filter((s) => s > 3).length,
     empty_rows_skipped: empty,
+  }
+  if (idx.has('venue')) {
+    out.venues = Object.fromEntries(VENUES.map((v) => [v, out.rows.filter((r) => r.venue === v).length])) as Record<Venue, number>
+    for (const v of VENUES) {
+      if (out.venues[v] > config.capacity[v]) out.warnings.push(`The CSV puts ${out.venues[v]} people in ${v}, over its capacity of ${config.capacity[v]}. Assigning venues will be refused until the capacity setting is raised.`)
+    }
   }
   if (!out.rows.length) out.errors.push('No participants found.')
   return out

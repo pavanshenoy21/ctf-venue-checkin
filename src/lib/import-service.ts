@@ -24,10 +24,10 @@ export async function commitImport(parsed: Parsed): Promise<Parsed['summary']> {
     const rows = parsed.rows
     const col = <K extends keyof (typeof rows)[number]>(k: K) => rows.map((r) => (r[k] === '' ? null : r[k]))
     await db.query(
-      `INSERT INTO participants (name, email, phone, sap_id, year, branch, team_id, qr_token)
-       SELECT * FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::int[], $8::text[])`,
+      `INSERT INTO participants (name, email, phone, sap_id, year, branch, team_id, qr_token, preset_venue)
+       SELECT * FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::int[], $8::text[], $9::text[])`,
       [col('name'), col('email'), col('phone'), col('sap'), col('year'), col('branch'),
-        rows.map((r) => (r.team ? ids.get(r.team.toLowerCase())! : null)), rows.map(() => newQrToken())])
+        rows.map((r) => (r.team ? ids.get(r.team.toLowerCase())! : null)), rows.map(() => newQrToken()), col('venue')])
     await db.query("UPDATE event_state SET allocation_status = 'NONE', confirmed_at = NULL WHERE id = 1")
     return parsed.summary
   })

@@ -16,9 +16,10 @@ RUN npx next build && npm run build:cli
 FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
-# the standalone server, its static assets, the SQL migrations (applied at start-up) and the ops CLI
+# the standalone server, its static assets and public/ (the email logo), the SQL migrations (applied at start-up) and the ops CLI
 COPY --from=build --chown=node:node /src/.next/standalone ./
 COPY --from=build --chown=node:node /src/.next/static ./.next/static
+COPY --from=build --chown=node:node /src/public ./public
 COPY --from=build --chown=node:node /src/migrations ./migrations
 COPY --from=build --chown=node:node /src/dist/cli.cjs ./cli.cjs
 USER node

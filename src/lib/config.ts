@@ -19,6 +19,12 @@ export const config = {
   get sessionHours() { return int('SESSION_HOURS', 12) },
   get eventTz() { return str('EVENT_TZ', 'Asia/Kolkata') },
   get eventName() { return str('EVENT_NAME', 'Voyage to Ithaca') },
+  // Shown in the emails: when teams report, and the window for people without a team.
+  get reportTimeTeam() { return str('REPORT_TIME_TEAM', '12:30 PM') },
+  // secret that fixes every player's and team's password; changing it changes them all
+  get passwordSeed() { return str('PASSWORD_SEED') },
+  get ctfUrl() { return str('CTF_URL').replace(/\/+$/, '') },
+  get reportTimeSolo() { return str('REPORT_TIME_SOLO', '11:00 AM – 12:20 PM') },
   get capacity(): Record<Venue, number> { return { DTH: int('DTH_CAPACITY', 145), ISE: int('ISE_CAPACITY', 113) } },
   get noTeamMarkers() { return str('NO_TEAM_MARKERS', '(no team),no team,noteam,none,n/a,na,-,null,solo,individual,no') },
   get trustProxy() { return bool('TRUST_PROXY', false) },

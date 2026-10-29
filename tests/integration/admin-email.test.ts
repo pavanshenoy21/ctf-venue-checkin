@@ -54,6 +54,7 @@ describe('email preview and export', () => {
     expect(r.items[0].html).toContain(`src="/api/admin/qr/${r.items[0].id}.png"`)
     const last = (await preview('?offset=170&limit=5')).body.items[0]
     expect(last.text).toContain('You are participating without a team.')
+    expect(last.html).not.toContain('/api/admin/qr/')
   })
   it('export a mail-merge CSV pointing at the public QR image', async () => {
     await confirmedDemo()
@@ -121,5 +122,17 @@ describe('sending', () => {
     await confirmedDemo(); smtpOn()
     expect((await send({ resend: 'yes' })).status).toBe(422)
     expect((await send({ only_email: 'x'.repeat(300) })).status).toBe(422)
+  })
+})
+
+describe('people without a team', () => {
+  it('their venue email has the rules but no QR', async () => {
+    await confirmedDemo(); smtpOn()
+    const p = await participant('team_id IS NULL')
+    await send({ only_email: p.email, resend: true }); await waitForSendJob()
+    const m = inbox[0]!
+    expect(m.text).toContain('Rules for participants without a team')
+    expect(`${m.text}${m.html}`).not.toContain(p.qr_token)
+    expect(m.attachments.map((a) => a.filename)).toEqual(['email-logo.png'])
   })
 })

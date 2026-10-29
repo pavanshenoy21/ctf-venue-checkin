@@ -9,6 +9,8 @@ const result = (page: Page, title: string) => page.getByRole('alertdialog', { na
 async function scanManually(page: Page, code: string, expectTitle: string) {
   await page.getByLabel('Manual entry').fill(code)
   await page.getByRole('button', { name: 'Check', exact: true }).click()
+  // someone who can be checked in is shown first (name, SAP ID, team), and the operator confirms
+  if (expectTitle === 'CHECK-IN SUCCESSFUL') await page.getByRole('alertdialog', { name: 'Confirm check-in' }).getByRole('button', { name: 'CONFIRM CHECK-IN' }).click()
   await expect(result(page, expectTitle)).toBeVisible()
 }
 

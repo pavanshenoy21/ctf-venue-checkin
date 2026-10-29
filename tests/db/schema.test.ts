@@ -10,7 +10,7 @@ describe('migrations', () => {
   it('apply once and are idempotent', async () => {
     expect(await migrate()).toEqual([])
     const v = await q<{ version: string }>('SELECT version FROM schema_migrations ORDER BY 1')
-    expect(v.map((r) => r.version)).toEqual(['001_schema.sql', '002_guards.sql'])
+    expect(v.map((r) => r.version)).toEqual(['001_schema.sql', '002_guards.sql', '003_walkins.sql', '004_exits.sql', '005_passwords.sql'])
   })
   it('create a single event_state row in NONE', async () => {
     expect(await one('SELECT allocation_status FROM event_state')).toEqual({ allocation_status: 'NONE' })

@@ -10,6 +10,10 @@ export async function generateAllocation(): Promise<AllocationReport> {
     if (st.allocation_status === 'CONFIRMED') throw new HttpError(409, 'Allocation is already confirmed and final.')
     const total = (await db.query<{ n: number }>('SELECT count(*)::int AS n FROM participants')).rows[0]!.n
     if (total === 0) throw new HttpError(409, 'Import participants first.')
+    if (await venuesFromCsv(db)) {
+      await applyCsvVenues(db)
+      return null
+    }
     const teams = (await db.query<{ id: number; name: string; size: number }>('SELECT id, name, participant_count AS size FROM teams')).rows
     const noTeam = (await db.query<{ n: number }>('SELECT count(*)::int AS n FROM participants WHERE team_id IS NULL')).rows[0]!.n
     const plan = planAllocation(teams.map((t) => ({ key: t.id, name: t.name, size: t.size })), noTeam, config.capacity.ISE, config.capacity.DTH)
@@ -29,6 +33,20 @@ export async function generateAllocation(): Promise<AllocationReport> {
   })
   if (failure) throw new HttpError(422, failure.error!, failure.conflicts)
   return allocationReport()
+}
+
+const venuesFromCsv = async (db: Db): Promise<boolean> =>
+  (await db.query<{ x: boolean }>('SELECT EXISTS (SELECT 1 FROM participants WHERE preset_venue IS NOT NULL) AS x')).rows[0]!.x
+
+// The imported CSV had a Venue column (an already published venue sheet): use it as-is. The import made
+// sure teams aren't split and nobody without a team is in ISE; capacity is checked here.
+async function applyCsvVenues(db: Db): Promise<void> {
+  const counts = (await db.query<{ venue: Venue; n: number }>('SELECT preset_venue AS venue, count(*)::int AS n FROM participants GROUP BY 1')).rows
+  const over = counts.filter((c) => c.n > config.capacity[c.venue]).map((c) => `${c.venue}: ${c.n} people, capacity ${config.capacity[c.venue]}`)
+  if (over.length) throw new HttpError(422, `The venues in the CSV don't fit the capacity settings (${over.join('; ')}). Raise the capacity in .env or fix the CSV.`)
+  await db.query('UPDATE participants SET assigned_venue = preset_venue')
+  await db.query('UPDATE teams t SET assigned_venue = (SELECT min(p.preset_venue) FROM participants p WHERE p.team_id = t.id)')
+  await db.query("UPDATE event_state SET allocation_status = 'DRAFT' WHERE id = 1")
 }
 
 // The checks that must all pass before confirmation (the DB triggers enforce most of them too).
@@ -74,6 +92,7 @@ export interface VenueSummary {
 }
 export interface AllocationReport {
   status: Status; confirmed_at: Date | null
+  from_csv: boolean // venues come from the imported CSV, not the allocation algorithm
   venues: Record<Venue, VenueSummary>
   teams: { name: string; size: number; venue: Venue | null }[]
   validation_errors: string[]
@@ -97,7 +116,7 @@ export async function allocationReport(db: Db = pool()): Promise<AllocationRepor
     'SELECT name, participant_count AS size, assigned_venue AS venue FROM teams ORDER BY participant_count DESC, lower(name), name')).rows
   const hasPeople = Object.values(venues).some((v) => v.participants) || teams.length > 0
   return {
-    status: st.allocation_status, confirmed_at: st.confirmed_at, venues, teams,
+    status: st.allocation_status, confirmed_at: st.confirmed_at, from_csv: await venuesFromCsv(db), venues, teams,
     validation_errors: st.allocation_status !== 'NONE' && hasPeople ? await validateAllocation(db) : [],
   }
 }
